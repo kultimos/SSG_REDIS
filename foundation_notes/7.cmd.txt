@@ -1,0 +1,6 @@
+set k100 v100
+set k200 v200
+hset k300 name hah
+hset k300 age 20
+hset k300 gennder male
+lpush list 1 2 3 4 5

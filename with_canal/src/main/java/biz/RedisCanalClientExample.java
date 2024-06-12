@@ -9,6 +9,8 @@ import com.alibaba.otter.canal.protocol.CanalEntry.*;
 import com.alibaba.otter.canal.protocol.Message;
 
 
+import com.google.common.hash.BloomFilter;
+import com.google.common.hash.Funnels;
 import redis.clients.jedis.Jedis;
 import utils.RedisUtils;
 
@@ -114,6 +116,7 @@ public class RedisCanalClientExample {
 
     public static void main(String[] args)
     {
+        BloomFilter<Integer> integerBloomFilter = BloomFilter.create(Funnels.integerFunnel(), 10000, 0.3);
         System.out.println("---------O(∩_∩)O哈哈~ initCanal() main方法-----------");
 
         //=================================

@@ -29,19 +29,24 @@ public class InventoryServiceImpl implements InventoryService {
         String retMessage = "";
         lock.lock();
         try {
+            Thread.sleep(10);
             String result = redisTemplate.opsForValue().get(KEY);
             Integer inventoryNumber = result == null && !result.equals("") ? 0 :  Integer.parseInt(result);
             if(inventoryNumber > 0) {
                 redisTemplate.opsForValue().set(KEY, String.valueOf(--inventoryNumber));
-                retMessage = "成功卖出一个商品,库存剩余:" + inventoryNumber;
+                retMessage = "端口" + port + "成功卖出一个商品,库存剩余:" + inventoryNumber;
+                log.info("当前编号: {}" + Thread.currentThread().getName());
                 log.info("服务端口号:{}," + retMessage, port);
+                log.info("=======================");
             } else {
                 retMessage = "商品卖完了,o(╥﹏╥)o";
                 log.info(retMessage);
             }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         } finally {
             lock.unlock();
         }
-        return null;
+        return retMessage;
     }
 }

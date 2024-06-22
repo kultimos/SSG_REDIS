@@ -1,6 +1,7 @@
 package com.kul.service.impl;
 
 import cn.hutool.core.util.IdUtil;
+import com.kul.mylock.DistributedLockFactory;
 import com.kul.mylock.RedisDistributedLock;
 import com.kul.service.InventoryService;
 import lombok.extern.slf4j.Slf4j;
@@ -26,23 +27,20 @@ public class InventoryServiceImpl implements InventoryService {
     @Value("${server.port}")
     private String port;
 
-    private static final String KEY = "inventory001";
+    @Autowired
+    private DistributedLockFactory factory;
 
-    private Lock lock = new RedisDistributedLock(redisTemplate, KEY);
+    private static final String KEY = "inventory001";
 
 
     /**
-     * V3.0版本,其实V2.3版本已经可以作为一个简单的分布式锁来进行使用;
-     * 但对于更大规模的并发量和更大规模的任务处理,我们在V2.3版本的分布式锁的基础上,仍然有很多优化点
-     * 即: 可重入和自动续期两部分;
-     * 3.0版本我们着重解决分布式锁的重入问题
-     * 参考AQS的实现方案,我们决定通过hash的key来帮我们实现加锁和重入的能力
-     * 并且因为使用hash结构进行加减锁有大量的redis语句,所以我们也需要将lua脚本整合进入我们的java程序中;
-     * 这里我们采用重写一个RedisDistributedLock作为我们自研的分布式锁来使用,代码与早期2.0版本一致,但是所引的lock和unlock方法却是我们自己编写的;
+     * V3.1版本,引入简单工厂模式进一步从启动到配置完善我们的分布式锁
+     * 已经完成了单机和分布式环境对于购买商品的压测,代码ok,放心食用;
      */
     @Override
     public String sale() {
         String retMessage = "";
+        Lock lock = factory.getDistributedLock("redis");
         lock.lock();
         try {
             Thread.sleep(10);
@@ -259,6 +257,41 @@ public class InventoryServiceImpl implements InventoryService {
 //                            "return 0 " +
 //                            "end";
 //            redisTemplate.execute(new DefaultRedisScript(luaScript, Boolean.class), Arrays.asList(key), uuid);
+//        }
+//        return retMessage;
+//    }
+
+    /**
+     * V3.0版本,其实V2.3版本已经可以作为一个简单的分布式锁来进行使用;
+     * 但对于更大规模的并发量和更大规模的任务处理,我们在V2.3版本的分布式锁的基础上,仍然有很多优化点
+     * 即: 可重入和自动续期两部分;
+     * 3.0版本我们着重解决分布式锁的重入问题
+     * 参考AQS的实现方案,我们决定通过hash的key来帮我们实现加锁和重入的能力
+     * 并且因为使用hash结构进行加减锁有大量的redis语句,所以我们也需要将lua脚本整合进入我们的java程序中;
+     * 这里我们采用重写一个RedisDistributedLock作为我们自研的分布式锁来使用,代码与早期2.0版本一致,但是所引的lock和unlock方法却是我们自己编写的;
+     */
+//    @Override
+//    public String sale() {
+//        String retMessage = "";
+//        lock.lock();
+//        try {
+//            Thread.sleep(10);
+//            String result = redisTemplate.opsForValue().get(KEY);
+//            Integer inventoryNumber = result == null && !result.equals("") ? 0 :  Integer.parseInt(result);
+//            if(inventoryNumber > 0) {
+//                redisTemplate.opsForValue().set(KEY, String.valueOf(--inventoryNumber));
+//                retMessage = "端口" + port + "成功卖出一个商品,库存剩余:" + inventoryNumber;
+//                log.info("当前编号: {}" + Thread.currentThread().getName());
+//                log.info("服务端口号:{}," + retMessage, port);
+//                log.info("=======================");
+//            } else {
+//                retMessage = "商品卖完了,o(╥﹏╥)o";
+//                log.info(retMessage);
+//            }
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        } finally {
+//            lock.unlock();
 //        }
 //        return retMessage;
 //    }

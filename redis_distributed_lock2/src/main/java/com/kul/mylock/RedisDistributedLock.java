@@ -1,6 +1,7 @@
 package com.kul.mylock;
 
 import cn.hutool.core.util.IdUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -14,18 +15,19 @@ import java.util.concurrent.locks.Lock;
 /**
  * 自研redis分布式锁,实现了Lock接口
  */
+@Slf4j
 public class RedisDistributedLock implements Lock {
 
     private StringRedisTemplate redisTemplate;
     private String lockName;
     private String uuidValue;
-    private long expireTime;
+    private String expireTime;
 
     public RedisDistributedLock(StringRedisTemplate stringRedisTemplate, String lockName) {
         this.redisTemplate = stringRedisTemplate;
         this.lockName = lockName;
         this.uuidValue = IdUtil.simpleUUID() + ":" + Thread.currentThread().getId();
-        this.expireTime = 50l;
+        this.expireTime = "50";
     }
 
     @Override
@@ -53,7 +55,7 @@ public class RedisDistributedLock implements Lock {
                     "return 0 " +
                     "end";
             while(!redisTemplate.execute(new DefaultRedisScript<>(script,Boolean.class), Arrays.asList(lockName), uuidValue, expireTime)) {
-                Thread.sleep(100);
+                Thread.sleep(10);
             }
             return true;
         }
@@ -71,6 +73,7 @@ public class RedisDistributedLock implements Lock {
                 "return 0 " +
                 "end";
         Long flag = redisTemplate.execute(new DefaultRedisScript<>(script, Long.class), Arrays.asList(lockName), uuidValue);
+        log.info("释放锁的结果是:{} ", flag);
         if(flag == null) {
             throw new RuntimeException("this lock doesn't exists");
         }

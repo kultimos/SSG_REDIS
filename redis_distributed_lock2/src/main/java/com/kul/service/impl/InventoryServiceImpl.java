@@ -5,6 +5,8 @@ import com.kul.mylock.DistributedLockFactory;
 import com.kul.mylock.RedisDistributedLock;
 import com.kul.service.InventoryService;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.Redisson;
+import org.redisson.api.RLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -30,19 +32,21 @@ public class InventoryServiceImpl implements InventoryService {
     @Autowired
     private DistributedLockFactory factory;
 
+    @Autowired
+    private Redisson redisson;
+
     private static final String KEY = "inventory001";
 
 
     /**
-     * V4.0版本,需要考虑自动续期的问题;
+     * V5.0版本,引入Redisson对应的官网推荐RedLock算法实现类
      */
     @Override
     public String sale() {
         String retMessage = "";
-        Lock lock = factory.getDistributedLock("redis");
+        RLock lock = redisson.getLock("RedisLock");
         lock.lock();
         try {
-            Thread.sleep(1000000);//为了测试自动续期
             String result = redisTemplate.opsForValue().get(KEY);
             Integer inventoryNumber = result == null && !result.equals("") ? 0 :  Integer.parseInt(result);
             if(inventoryNumber > 0) {
@@ -55,10 +59,10 @@ public class InventoryServiceImpl implements InventoryService {
                 retMessage = "商品卖完了,o(╥﹏╥)o";
                 log.info(retMessage);
             }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         } finally {
-            lock.unlock();
+            if(lock.isLocked() && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
         return retMessage;
     }
@@ -306,6 +310,36 @@ public class InventoryServiceImpl implements InventoryService {
 //        lock.lock();
 //        try {
 //            Thread.sleep(10);
+//            String result = redisTemplate.opsForValue().get(KEY);
+//            Integer inventoryNumber = result == null && !result.equals("") ? 0 :  Integer.parseInt(result);
+//            if(inventoryNumber > 0) {
+//                redisTemplate.opsForValue().set(KEY, String.valueOf(--inventoryNumber));
+//                retMessage = "端口" + port + "成功卖出一个商品,库存剩余:" + inventoryNumber;
+//                log.info("当前编号: {}" + Thread.currentThread().getName());
+//                log.info("服务端口号:{}," + retMessage, port);
+//                log.info("=======================");
+//            } else {
+//                retMessage = "商品卖完了,o(╥﹏╥)o";
+//                log.info(retMessage);
+//            }
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        } finally {
+//            lock.unlock();
+//        }
+//        return retMessage;
+//    }
+
+    /**
+     * V4.0版本,需要考虑自动续期的问题;
+     */
+//    @Override
+//    public String sale() {
+//        String retMessage = "";
+//        Lock lock = factory.getDistributedLock("redis");
+//        lock.lock();
+//        try {
+//            Thread.sleep(1000000);//为了测试自动续期
 //            String result = redisTemplate.opsForValue().get(KEY);
 //            Integer inventoryNumber = result == null && !result.equals("") ? 0 :  Integer.parseInt(result);
 //            if(inventoryNumber > 0) {

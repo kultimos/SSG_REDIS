@@ -34,8 +34,7 @@ public class InventoryServiceImpl implements InventoryService {
 
 
     /**
-     * V3.1版本,引入简单工厂模式进一步从启动到配置完善我们的分布式锁
-     * 已经完成了单机和分布式环境对于购买商品的压测,代码ok,放心食用;
+     * V4.0版本,需要考虑自动续期的问题;
      */
     @Override
     public String sale() {
@@ -43,7 +42,7 @@ public class InventoryServiceImpl implements InventoryService {
         Lock lock = factory.getDistributedLock("redis");
         lock.lock();
         try {
-            Thread.sleep(10);
+            Thread.sleep(1000000);//为了测试自动续期
             String result = redisTemplate.opsForValue().get(KEY);
             Integer inventoryNumber = result == null && !result.equals("") ? 0 :  Integer.parseInt(result);
             if(inventoryNumber > 0) {
@@ -273,6 +272,37 @@ public class InventoryServiceImpl implements InventoryService {
 //    @Override
 //    public String sale() {
 //        String retMessage = "";
+//        lock.lock();
+//        try {
+//            Thread.sleep(10);
+//            String result = redisTemplate.opsForValue().get(KEY);
+//            Integer inventoryNumber = result == null && !result.equals("") ? 0 :  Integer.parseInt(result);
+//            if(inventoryNumber > 0) {
+//                redisTemplate.opsForValue().set(KEY, String.valueOf(--inventoryNumber));
+//                retMessage = "端口" + port + "成功卖出一个商品,库存剩余:" + inventoryNumber;
+//                log.info("当前编号: {}" + Thread.currentThread().getName());
+//                log.info("服务端口号:{}," + retMessage, port);
+//                log.info("=======================");
+//            } else {
+//                retMessage = "商品卖完了,o(╥﹏╥)o";
+//                log.info(retMessage);
+//            }
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        } finally {
+//            lock.unlock();
+//        }
+//        return retMessage;
+//    }
+
+    /**
+     * V3.1版本,引入简单工厂模式进一步从启动到配置完善我们的分布式锁
+     * 已经完成了单机和分布式环境对于购买商品的压测,代码ok,放心食用;
+     */
+//    @Override
+//    public String sale() {
+//        String retMessage = "";
+//        Lock lock = factory.getDistributedLock("redis");
 //        lock.lock();
 //        try {
 //            Thread.sleep(10);
